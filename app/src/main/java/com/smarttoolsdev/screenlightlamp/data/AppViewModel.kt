@@ -7,13 +7,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
+    private val timerModel = TimerModel()
+    val timerState: State<TimerState> = timerModel.timerState
 
     // Brightness state
     private val _brightness = mutableStateOf(1f)
@@ -22,11 +22,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // Color state
     private val _selectedColor = mutableStateOf(Color.White)
     val selectedColor: State<Color> = _selectedColor
-
-    // Timer states
-    private val _isTimerActive = mutableStateOf(false)
-    val isTimerActive: State<Boolean> = _isTimerActive
-    private var timerJob: Job? = null
 
     // Tutorial state
     private val _showTutorial = MutableStateFlow(false)
@@ -44,18 +39,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _selectedColor.value = color
     }
 
-    fun updateTimerActive(active: Boolean, minutes: Int? = null) {
-        _isTimerActive.value = active
-        timerJob?.cancel()
+    fun startTimer(minutes: Int) {
+        timerModel.startTimer(minutes)
+    }
 
-        if (active && minutes != null) {
-            timerJob = viewModelScope.launch {
-                delay(minutes * 60 * 1000L)
-                _isTimerActive.value = false
-                // Reset brightness when timer completes
-                _brightness.value = 0f
-            }
-        }
+    fun stopTimer() {
+        timerModel.stopTimer()
     }
 
     fun completeTutorial() {
@@ -84,7 +73,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
-        timerJob?.cancel()
+        timerModel.stopTimer()
     }
 
     companion object {
