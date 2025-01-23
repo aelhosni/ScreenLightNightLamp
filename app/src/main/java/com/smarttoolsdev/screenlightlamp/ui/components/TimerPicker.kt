@@ -11,11 +11,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.smarttoolsdev.screenlightlamp.data.TimerState
 import com.smarttoolsdev.screenlightlamp.ui.theme.*
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,10 +28,6 @@ fun TimerPicker(
     onTimerStop: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val presetTimes = listOf(5, 10, 15, 30, 45, 60, 90, 120)
-    var showCustomDialog by remember { mutableStateOf(false) }
-    var selectedMinutes by remember { mutableStateOf<Int?>(null) }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = BackgroundDark,
@@ -39,250 +38,177 @@ fun TimerPicker(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (timerState.isActive) "Timer Active" else "Set Timer",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
+            when (timerState) {
+                is TimerState.Active -> ActiveTimerView(
+                    timerState = timerState,
+                    onStop = onTimerStop
                 )
-
-                if (timerState.isActive) {
-                    TimerDisplay(timerState)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (timerState.isActive) {
-                TimerProgressIndicator(timerState)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onTimerStop,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Stop Timer")
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(presetTimes) { minutes ->
-                        TimerPresetButton(
-                            minutes = minutes,
-                            isSelected = selectedMinutes == minutes,
-                            onClick = { selectedMinutes = minutes }
-                        )
-                    }
-
-                    item {
-                        TimerPresetButton(
-                            text = "Custom",
-                            isSelected = false,
-                            onClick = { showCustomDialog = true }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TextButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Cancel", color = Color.White)
-                    }
-
-                    Button(
-                        onClick = {
-                            selectedMinutes?.let {
-                                onTimerStart(it)
-                                onDismiss()
-                            }
-                        },
-                        enabled = selectedMinutes != null,
-                        colors = ButtonDefaults.buttonColors(containerColor = GoldYellow),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Start", color = Color.Black)
-                    }
-                }
+                is TimerState.Paused -> {}  // Paused state not used in this implementation
+                is TimerState.Inactive -> TimerSetup(
+                    onTimeSelected = onTimerStart,
+                    onCancel = onDismiss
+                )
             }
         }
     }
+}
 
-    if (showCustomDialog) {
-        CustomTimerDialog(
-            onDismiss = { showCustomDialog = false },
-            onConfirm = { minutes ->
-                selectedMinutes = minutes
-                showCustomDialog = false
+@Composable
+private fun ActiveTimerView(
+    timerState: TimerState.Active,
+    onStop: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = formatTime(timerState.remainingMillis),
+            style = MaterialTheme.typography.displayLarge,
+            color = Color.White
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        LinearProgressIndicator(
+            progress = { 1f - timerState.progress },
+            modifier = Modifier.fillMaxWidth(),
+            color = GoldYellow,
+            trackColor = Color.White.copy(alpha = 0.2f)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = onStop,
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Cancel Timer")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimerSetup(
+    onTimeSelected: (Int) -> Unit,
+    onCancel: () -> Unit
+) {
+    var selectedHour by remember { mutableStateOf(0) }
+    var selectedMinute by remember { mutableStateOf(30) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Set Timer",
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.White,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        TimeInput(
+            hours = selectedHour,
+            minutes = selectedMinute,
+            onHoursChange = { selectedHour = it.coerceIn(0, 4) },
+            onMinutesChange = { selectedMinute = it.coerceIn(0, 59) },
+            modifier = Modifier.padding(16.dp)
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        QuickSelect(
+            onTimeSelected = { minutes ->
+                selectedHour = minutes / 60
+                selectedMinute = minutes % 60
             }
         )
-    }
-}
 
-@Composable
-private fun TimerDisplay(timerState: TimerState) {
-    val minutes = timerState.remainingSeconds / 60
-    val seconds = timerState.remainingSeconds % 60
+        Spacer(modifier = Modifier.height(32.dp))
 
-    Text(
-        text = String.format("%02d:%02d", minutes, seconds),
-        style = MaterialTheme.typography.headlineMedium,
-        color = GoldYellow
-    )
-}
-
-@Composable
-private fun TimerProgressIndicator(timerState: TimerState) {
-    LinearProgressIndicator(
-        progress = timerState.progress,
-        color = GoldYellow,
-        trackColor = Color.White.copy(alpha = 0.2f),
-        modifier = Modifier.fillMaxWidth()
-    )
-}
-
-@Composable
-private fun TimerPresetButton(
-    minutes: Int? = null,
-    text: String = "${minutes}m",
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        color = if (isSelected) GoldYellow.copy(alpha = 0.2f) else Color.Transparent,
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (isSelected) GoldYellow else Color.White.copy(alpha = 0.3f)
-        ),
-        modifier = Modifier.height(80.dp)
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(8.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Text(
-                text = text,
-                color = if (isSelected) GoldYellow else Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-private fun CustomTimerDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (Int) -> Unit
-) {
-    var minutes by remember { mutableStateOf(15) }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = BackgroundDark
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .width(280.dp)
+            TextButton(
+                onClick = onCancel,
+                modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = "Custom Timer",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
-                )
+                Text("Cancel", color = Color.White)
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    NumberStepper(
-                        value = minutes,
-                        onValueChange = { minutes = it.coerceIn(1, 180) },
-                        modifier = Modifier.width(120.dp)
-                    )
-
-                    Text(
-                        text = "minutes",
-                        color = Color.White,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = Color.White)
+            Button(
+                onClick = {
+                    val totalMinutes = (selectedHour * 60) + selectedMinute
+                    if (totalMinutes > 0) {
+                        onTimeSelected(totalMinutes)
                     }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Button(
-                        onClick = { onConfirm(minutes) },
-                        colors = ButtonDefaults.buttonColors(containerColor = GoldYellow)
-                    ) {
-                        Text("Set", color = Color.Black)
-                    }
-                }
+                },
+                enabled = selectedHour > 0 || selectedMinute > 0,
+                colors = ButtonDefaults.buttonColors(containerColor = GoldYellow),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Start", color = Color.Black)
             }
         }
     }
 }
 
 @Composable
-private fun NumberStepper(
-    value: Int,
-    onValueChange: (Int) -> Unit,
+private fun QuickSelect(onTimeSelected: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        listOf(15, 30, 45, 60).forEach { minutes ->
+            OutlinedButton(
+                onClick = { onTimeSelected(minutes) },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color.White
+                ),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+            ) {
+                Text("${minutes}m")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimeInput(
+    hours: Int,
+    minutes: Int,
+    onHoursChange: (Int) -> Unit,
+    onMinutesChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(
-            onClick = { onValueChange(value - 1) },
-            enabled = value > 1
-        ) {
-            Text("-", color = Color.White)
-        }
-
-        Text(
-            text = "$value",
-            color = Color.White,
-            style = MaterialTheme.typography.titleLarge
+        TimePicker(
+            state = TimePickerState(hours, minutes, is24Hour = true),
+            modifier = Modifier.fillMaxWidth()
         )
+    }
+}
 
-        IconButton(
-            onClick = { onValueChange(value + 1) },
-            enabled = value < 180
-        ) {
-            Text("+", color = Color.White)
-        }
+private fun formatTime(millis: Long): String {
+    val hours = TimeUnit.MILLISECONDS.toHours(millis)
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
+
+    return if (hours > 0) {
+        String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 }

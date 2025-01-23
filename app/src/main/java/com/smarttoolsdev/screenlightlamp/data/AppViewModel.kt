@@ -13,7 +13,11 @@ import kotlinx.coroutines.launch
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val timerModel = TimerModel()
-    val timerState: State<TimerState> = timerModel.timerState
+    private val _timerState = mutableStateOf<TimerState>(TimerState.Inactive)
+    val timerState: State<TimerState> = _timerState
+
+    private val _shouldShowTimerFinished = mutableStateOf(false)
+    val shouldShowTimerFinished: State<Boolean> = _shouldShowTimerFinished
 
     // Brightness state
     private val _brightness = mutableStateOf(1f)
@@ -29,6 +33,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         _showTutorial.value = getTutorialState()
+        viewModelScope.launch {
+            timerModel.timerState.collect {
+                _timerState.value = it
+            }
+        }
+        viewModelScope.launch {
+            timerModel.timerFinished.collect { finished ->
+                if (finished) {
+                    _shouldShowTimerFinished.value = true
+                }
+            }
+        }
     }
 
     fun updateBrightness(value: Float) {
@@ -40,11 +56,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startTimer(minutes: Int) {
+        _shouldShowTimerFinished.value = false
         timerModel.startTimer(minutes)
     }
 
     fun stopTimer() {
         timerModel.stopTimer()
+    }
+
+    fun dismissTimerFinished() {
+        _shouldShowTimerFinished.value = false
     }
 
     fun completeTutorial() {

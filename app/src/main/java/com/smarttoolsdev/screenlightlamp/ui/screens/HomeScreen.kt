@@ -14,13 +14,16 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.smarttoolsdev.screenlightlamp.R
 import com.smarttoolsdev.screenlightlamp.data.AppViewModel
+import com.smarttoolsdev.screenlightlamp.data.TimerState
 import com.smarttoolsdev.screenlightlamp.ui.components.*
 import com.smarttoolsdev.screenlightlamp.ui.theme.*
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.floor
-import androidx.compose.foundation.layout.Box
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun HomeScreen(
@@ -41,12 +44,10 @@ fun HomeScreen(
     var colorPosition by remember { mutableFloatStateOf(0f) }
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
 
-    // Sync brightness from ViewModel
     LaunchedEffect(viewModel.brightness.value) {
         brightnessController.setBrightness(viewModel.brightness.value)
     }
 
-    // Snap colorPosition if color was externally changed
     LaunchedEffect(viewModel.selectedColor.value) {
         val index = colors.indexOf(viewModel.selectedColor.value)
         if (index >= 0) {
@@ -95,7 +96,6 @@ fun HomeScreen(
                 )
             }
     ) {
-        // Show brightness % if below 100%
         if (viewModel.brightness.value < 1f) {
             Text(
                 text = "${(viewModel.brightness.value * 100).toInt()}%",
@@ -105,26 +105,54 @@ fun HomeScreen(
             )
         }
 
-        if (viewModel.timerState.value.isActive) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .padding(vertical = 8.dp, horizontal = 16.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Timer: ${viewModel.timerState.value.totalMinutes} min",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    TextButton(onClick = { viewModel.stopTimer() }) {
-                        Text(text = "Cancel", color = Color.Red)
+        // Timer Finished Alert
+        if (viewModel.shouldShowTimerFinished.value) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissTimerFinished() },
+                title = { Text("Timer Finished") },
+                text = { Text("Your timer has completed.") },
+                confirmButton = {
+                    Button(
+                        onClick = { viewModel.dismissTimerFinished() },
+                        colors = ButtonDefaults.buttonColors(containerColor = GoldYellow)
+                    ) {
+                        Text("OK")
+                    }
+                },
+                containerColor = BackgroundDark,
+                titleContentColor = Color.White,
+                textContentColor = Color.White
+            )
+        }
+
+        // Active Timer Display
+        when (val currentState = viewModel.timerState.value) {
+            is TimerState.Active -> {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(vertical = 8.dp, horizontal = 16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = formatTime(currentState.remainingMillis),
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        TextButton(onClick = { viewModel.stopTimer() }) {
+                            Text(text = "Cancel", color = Color.Red)
+                        }
                     }
                 }
             }
+            else -> { /* No timer active */ }
         }
+
         BottomNavBar(
             onTimerClick = { showTimer = true },
             onColorClick = { showColorPicker = true },
@@ -133,10 +161,6 @@ fun HomeScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
-
-
-
-        // Dialogs
         if (showColorPicker) {
             ColorPickerSheet(
                 selectedColor = viewModel.selectedColor.value,
@@ -149,14 +173,14 @@ fun HomeScreen(
             )
         }
 
-    if (showTimer) {
-        TimerPicker(
-            timerState = viewModel.timerState.value,
-            onTimerStart = { minutes -> viewModel.startTimer(minutes) },
-            onTimerStop = { viewModel.stopTimer() },
-            onDismiss = { showTimer = false }
-        )
-    }
+        if (showTimer) {
+            TimerPicker(
+                timerState = viewModel.timerState.value,
+                onTimerStart = { minutes -> viewModel.startTimer(minutes) },
+                onTimerStop = { viewModel.stopTimer() },
+                onDismiss = { showTimer = false }
+            )
+        }
     }
 }
 
@@ -258,5 +282,17 @@ private fun BottomNavBar(
             Text("Relax", color = Color.White, style = MaterialTheme.typography.bodySmall)
             Text("More",  color = Color.White, style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
+
+private fun formatTime(millis: Long): String {
+    val hours = TimeUnit.MILLISECONDS.toHours(millis)
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
+
+    return if (hours > 0) {
+        String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 }

@@ -1,8 +1,15 @@
 package com.smarttoolsdev.screenlightlamp.data
 
-data class TimerState(
-    val isActive: Boolean = false,
-    val totalMinutes: Int = 0,
-    val remainingSeconds: Long = 0,
-    val progress: Float = 0f
-)
+sealed class TimerState {
+    data object Inactive : TimerState()
+    data class Active(
+        val totalMillis: Long,
+        val remainingMillis: Long,
+        val progress: Float
+    ) : TimerState()
+    data class Paused(
+        val totalMillis: Long,
+        val remainingMillis: Long,
+        val progress: Float
+    ) : TimerState()
+}
