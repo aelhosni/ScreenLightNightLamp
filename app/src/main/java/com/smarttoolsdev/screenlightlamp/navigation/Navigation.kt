@@ -12,8 +12,6 @@ import com.smarttoolsdev.screenlightlamp.ui.screens.*
 sealed class Screen(val route: String) {
     object Tutorial : Screen("tutorial")
     object Home : Screen("home")
-    object RelaxingSounds : Screen("relaxing_sounds")
-    object Settings : Screen("settings")
 }
 
 @Composable
@@ -41,36 +39,11 @@ fun AppNavigation(
         composable(Screen.Home.route) {
             HomeScreen(
                 viewModel = viewModel,
-                onNavigateToRelaxingSounds = {
-                    navController.navigate(Screen.RelaxingSounds.route)
-                },
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
-                }
             )
         }
 
-        composable(Screen.RelaxingSounds.route) {
-            RelaxingSoundsScreen(
-                onBackClick = {
-                    navController.navigateUp()
-                }
-            )
-        }
 
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                onBackClick = { navController.navigateUp() },
-                onTutorialClick = {
-                    navController.navigate(Screen.Tutorial.route) {
-                        popUpTo(Screen.Home.route)
-                    }
-                },
-                onPrivacyPolicyClick = { /* Handle privacy policy click */ },
-                onCreditsClick = { /* Handle credits click */ },
-                onShareClick = { /* Handle share click */ },
-                onRateClick = { /* Handle rate click */ }
-            )
-        }
+
+
     }
 }

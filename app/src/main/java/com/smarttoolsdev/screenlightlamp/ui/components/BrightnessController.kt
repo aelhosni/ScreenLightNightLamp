@@ -9,7 +9,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
-class BrightnessController(private val context: Context) {
+class BrightnessController(context: Context) {
     private val window = (context as Activity).window
     private var systemBrightness = 0
     private var isAutoMode = false

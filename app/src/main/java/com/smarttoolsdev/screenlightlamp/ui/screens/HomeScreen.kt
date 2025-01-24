@@ -11,28 +11,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import com.smarttoolsdev.screenlightlamp.R
 import com.smarttoolsdev.screenlightlamp.data.AppViewModel
-import com.smarttoolsdev.screenlightlamp.data.TimerState
 import com.smarttoolsdev.screenlightlamp.ui.components.*
 import com.smarttoolsdev.screenlightlamp.ui.theme.*
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.floor
-import java.util.concurrent.TimeUnit
 
 @Composable
 fun HomeScreen(
     viewModel: AppViewModel,
-    onNavigateToRelaxingSounds: () -> Unit,
-    onNavigateToSettings: () -> Unit
 ) {
-    var showColorPicker by remember { mutableStateOf(false) }
-    var showTimer by remember { mutableStateOf(false) }
 
     val brightnessController = rememberBrightnessController()
     val colors = remember {
@@ -105,194 +94,5 @@ fun HomeScreen(
             )
         }
 
-        // Timer Finished Alert
-        if (viewModel.shouldShowTimerFinished.value) {
-            AlertDialog(
-                onDismissRequest = { viewModel.dismissTimerFinished() },
-                title = { Text("Timer Finished") },
-                text = { Text("Your timer has completed.") },
-                confirmButton = {
-                    Button(
-                        onClick = { viewModel.dismissTimerFinished() },
-                        colors = ButtonDefaults.buttonColors(containerColor = GoldYellow)
-                    ) {
-                        Text("OK")
-                    }
-                },
-                containerColor = BackgroundDark,
-                titleContentColor = Color.White,
-                textContentColor = Color.White
-            )
-        }
-
-        // Active Timer Display
-        when (val currentState = viewModel.timerState.value) {
-            is TimerState.Active -> {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .padding(vertical = 8.dp, horizontal = 16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = formatTime(currentState.remainingMillis),
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        TextButton(onClick = { viewModel.stopTimer() }) {
-                            Text(text = "Cancel", color = Color.Red)
-                        }
-                    }
-                }
-            }
-            else -> { /* No timer active */ }
-        }
-
-        BottomNavBar(
-            onTimerClick = { showTimer = true },
-            onColorClick = { showColorPicker = true },
-            onRelaxClick = onNavigateToRelaxingSounds,
-            onMoreClick = onNavigateToSettings,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
-
-        if (showColorPicker) {
-            ColorPickerSheet(
-                selectedColor = viewModel.selectedColor.value,
-                onColorSelected = {
-                    val idx = colors.indexOf(it)
-                    if (idx >= 0) colorPosition = idx.toFloat()
-                    viewModel.updateColor(it)
-                },
-                onDismiss = { showColorPicker = false }
-            )
-        }
-
-        if (showTimer) {
-            TimerPicker(
-                timerState = viewModel.timerState.value,
-                onTimerStart = { minutes -> viewModel.startTimer(minutes) },
-                onTimerStop = { viewModel.stopTimer() },
-                onDismiss = { showTimer = false }
-            )
-        }
-    }
-}
-
-@Composable
-private fun BottomNavBar(
-    onTimerClick: () -> Unit,
-    onColorClick: () -> Unit,
-    onRelaxClick: () -> Unit,
-    onMoreClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .padding(bottom = 48.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            IconButton(
-                onClick = onTimerClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = Color.White.copy(alpha = 0.1f),
-                        shape = MaterialTheme.shapes.small
-                    )
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_timer),
-                    contentDescription = "Timer",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            IconButton(
-                onClick = onColorClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = Color.White.copy(alpha = 0.1f),
-                        shape = MaterialTheme.shapes.small
-                    )
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_color),
-                    contentDescription = "Color",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            IconButton(
-                onClick = onRelaxClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = Color.White.copy(alpha = 0.1f),
-                        shape = MaterialTheme.shapes.small
-                    )
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_relax),
-                    contentDescription = "Relaxing Sounds",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            IconButton(
-                onClick = onMoreClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = Color.White.copy(alpha = 0.1f),
-                        shape = MaterialTheme.shapes.small
-                    )
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_more),
-                    contentDescription = "More",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 56.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Text("Timer", color = Color.White, style = MaterialTheme.typography.bodySmall)
-            Text("Color", color = Color.White, style = MaterialTheme.typography.bodySmall)
-            Text("Relax", color = Color.White, style = MaterialTheme.typography.bodySmall)
-            Text("More",  color = Color.White, style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
-private fun formatTime(millis: Long): String {
-    val hours = TimeUnit.MILLISECONDS.toHours(millis)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
-
-    return if (hours > 0) {
-        String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 }
