@@ -64,6 +64,8 @@ dependencies {
     // Icons
     implementation("androidx.compose.material:material-icons-extended:1.7.6")
 
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.0.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

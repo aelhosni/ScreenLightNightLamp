@@ -1,49 +1,73 @@
 package com.smarttoolsdev.screenlightlamp.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.smarttoolsdev.screenlightlamp.data.AppViewModel
-import com.smarttoolsdev.screenlightlamp.ui.screens.*
-
-sealed class Screen(val route: String) {
-    object Tutorial : Screen("tutorial")
-    object Home : Screen("home")
-}
+import com.smarttoolsdev.screenlightlamp.data.TimerViewModel
+import com.smarttoolsdev.screenlightlamp.ui.components.BottomNav
+import com.smarttoolsdev.screenlightlamp.ui.components.TimerOverlay
+import com.smarttoolsdev.screenlightlamp.ui.screens.HomeScreen
+import com.smarttoolsdev.screenlightlamp.ui.screens.TimerScreen
 
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    viewModel: AppViewModel
+    viewModel: AppViewModel,
+    timerViewModel: TimerViewModel
 ) {
-    val showTutorial by viewModel.showTutorial.collectAsState()
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val timerState by timerViewModel.timerState.collectAsState()
 
-    NavHost(
-        navController = navController,
-        startDestination = if (showTutorial) Screen.Tutorial.route else Screen.Home.route
-    ) {
-        composable(Screen.Tutorial.route) {
-            TutorialScreen(
-                viewModel = viewModel,
-                onComplete = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Tutorial.route) { inclusive = true }
-                    }
+    Scaffold(
+        modifier = Modifier.systemBarsPadding(),
+        bottomBar = {
+            BottomNav(
+                currentRoute = currentRoute,
+                onNavigate = { navController.navigate(it.route) }
+            )
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            NavHost(
+                navController = navController,
+                startDestination = NavItem.Home.route
+            ) {
+                composable(NavItem.Home.route) {
+                    HomeScreen(viewModel = viewModel)
                 }
+                composable(NavItem.Timer.route) {
+                    TimerScreen(
+                        viewModel = timerViewModel,
+                        onSelectPreset = { timerViewModel.startTimer(it) },
+                        onNavigateBack = {
+                            navController.navigate(NavItem.Home.route) {
+                                popUpTo(NavItem.Timer.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+                composable(NavItem.Presets.route) {
+                    // Implement later
+                }
+                composable(NavItem.Settings.route) {
+                    // Implement later
+                }
+            }
+
+            TimerOverlay(
+                state = timerState,
+                onCancel = { timerViewModel.cancelTimer() }
             )
         }
-
-        composable(Screen.Home.route) {
-            HomeScreen(
-                viewModel = viewModel,
-            )
-        }
-
-
-
-
     }
 }
