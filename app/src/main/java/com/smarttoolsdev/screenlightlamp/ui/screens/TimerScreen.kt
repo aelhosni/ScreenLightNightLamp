@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.smarttoolsdev.screenlightlamp.data.TimerViewModel
+import com.smarttoolsdev.screenlightlamp.ui.components.TimePickerWheel
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -28,6 +29,8 @@ fun TimerScreen(
     }
 
     val presets = listOf(5L, 10L, 30L, 60L)
+    var customHours by remember { mutableStateOf(0) }
+    var customMinutes by remember { mutableStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -61,5 +64,31 @@ fun TimerScreen(
         }
 
         Spacer(Modifier.height(16.dp))
+
+        Text(
+            "Or set a custom time",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        TimePickerWheel(
+            hours = customHours,
+            minutes = customMinutes,
+            onHoursChanged = { customHours = it },
+            onMinutesChanged = { customMinutes = it }
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        ElevatedButton(
+            onClick = {
+                val totalMinutes = customHours * 60 + customMinutes
+                onSelectPreset(totalMinutes.toLong())
+            },
+        ) {
+            Text("Start Timer")
+        }
     }
 }
