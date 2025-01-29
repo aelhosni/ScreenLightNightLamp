@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class TimerViewModel : ViewModel() {
+class TimerViewModel(
+    private val appViewModel: AppViewModel
+) : ViewModel() {
     private val _timerState = MutableStateFlow(TimerState())
     val timerState = _timerState.asStateFlow()
 
@@ -33,6 +35,7 @@ class TimerViewModel : ViewModel() {
                     remainingTime = it.remainingTime - 1000
                 )}
             }
+            appViewModel.updateBrightness(0.01f)
             _timerState.value = TimerState()
         }
     }

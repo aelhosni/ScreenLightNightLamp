@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
 import com.smarttoolsdev.screenlightlamp.data.AppViewModel
 import com.smarttoolsdev.screenlightlamp.data.TimerViewModel
@@ -18,10 +19,15 @@ import com.smarttoolsdev.screenlightlamp.ui.theme.ScreenLightNightLampSleepTheme
 
 class MainActivity : ComponentActivity() {
     private val appViewModel: AppViewModel by viewModels()
-    private val timerViewModel: TimerViewModel by viewModels()
+    private lateinit var timerViewModel: TimerViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        timerViewModel = ViewModelProvider(
+            this,
+            TimerViewModelFactory(appViewModel)
+        )[TimerViewModel::class.java]
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.setFlags(
