@@ -13,6 +13,8 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
 import com.smarttoolsdev.screenlightlamp.data.AppViewModel
+import com.smarttoolsdev.screenlightlamp.data.ScenesViewModel
+import com.smarttoolsdev.screenlightlamp.data.ScenesViewModelFactory
 import com.smarttoolsdev.screenlightlamp.data.TimerViewModel
 import com.smarttoolsdev.screenlightlamp.navigation.AppNavigation
 import com.smarttoolsdev.screenlightlamp.ui.theme.ScreenLightNightLampSleepTheme
@@ -20,6 +22,7 @@ import com.smarttoolsdev.screenlightlamp.ui.theme.ScreenLightNightLampSleepTheme
 class MainActivity : ComponentActivity() {
     private val appViewModel: AppViewModel by viewModels()
     private lateinit var timerViewModel: TimerViewModel
+    private lateinit var scenesViewModel: ScenesViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,6 +31,12 @@ class MainActivity : ComponentActivity() {
             this,
             TimerViewModelFactory(appViewModel)
         )[TimerViewModel::class.java]
+
+        scenesViewModel = ViewModelProvider(
+            this,
+            ScenesViewModelFactory(appViewModel)
+        )[ScenesViewModel::class.java]
+
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.setFlags(
@@ -45,7 +54,8 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(
                         navController = rememberNavController(),
                         viewModel = appViewModel,
-                        timerViewModel = timerViewModel
+                        timerViewModel = timerViewModel,
+                        scenesViewModel = scenesViewModel
                     )
                 }
             }

@@ -13,17 +13,20 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.smarttoolsdev.screenlightlamp.data.AppViewModel
+import com.smarttoolsdev.screenlightlamp.data.ScenesViewModel
 import com.smarttoolsdev.screenlightlamp.data.TimerViewModel
 import com.smarttoolsdev.screenlightlamp.ui.components.BottomNav
 import com.smarttoolsdev.screenlightlamp.ui.components.TimerOverlay
 import com.smarttoolsdev.screenlightlamp.ui.screens.HomeScreen
+import com.smarttoolsdev.screenlightlamp.ui.screens.PresetsScreen
 import com.smarttoolsdev.screenlightlamp.ui.screens.TimerScreen
 
 @Composable
 fun AppNavigation(
     navController: NavHostController,
     viewModel: AppViewModel,
-    timerViewModel: TimerViewModel
+    timerViewModel: TimerViewModel,
+    scenesViewModel: ScenesViewModel
 ) {
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     val timerState by timerViewModel.timerState.collectAsState()
@@ -57,7 +60,15 @@ fun AppNavigation(
                     )
                 }
                 composable(NavItem.Presets.route) {
-                    // Implement later
+                    PresetsScreen(
+                        viewModel = scenesViewModel,
+                        onNavigateToHome = {
+                            navController.navigate(NavItem.Home.route) {
+                                // Pop up to the home destination to avoid building up a large back stack
+                                popUpTo(NavItem.Home.route) { inclusive = true }
+                            }
+                        }
+                    )
                 }
                 composable(NavItem.Settings.route) {
                     // Implement later
